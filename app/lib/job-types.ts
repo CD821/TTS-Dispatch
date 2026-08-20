@@ -52,11 +52,19 @@ export type JobAnalytics = {
   daily: DailyItem[];
 };
 
+export type JobDirectories = {
+  installers: string[];
+  projectManagers: string[];
+  builders: string[];
+  subdivisions: string[];
+};
+
 export type JobsResponse = {
   jobs: JobRecord[];
   total: number;
   metrics: RangeMetrics;
   analytics: JobAnalytics;
+  directories: JobDirectories;
   dateRange: { from: string | null; to: string | null };
   error?: string;
 };

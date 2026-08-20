@@ -2,7 +2,7 @@ import seedJobs from "../../data/jobs.json";
 import { auth } from "@clerk/nextjs/server";
 import { listStoredJobs, saveStoredJob, type StoredJobRow } from "../../../db/jobs-store";
 import { summarizeJobs } from "../../lib/job-analytics";
-import type { JobRecord } from "../../lib/job-types";
+import type { JobDirectories, JobRecord } from "../../lib/job-types";
 
 export type { JobRecord } from "../../lib/job-types";
 
@@ -71,12 +71,16 @@ function matches(job: JobRecord, params: URLSearchParams) {
   const query = params.get("q")?.trim().toLowerCase();
   const installer = params.get("installer");
   const type = params.get("type");
+  const scope = params.get("scope");
   if (date && job.dispatchDate !== date) return false;
   if (from && (!job.dispatchDate || job.dispatchDate < from)) return false;
   if (to && (!job.dispatchDate || job.dispatchDate > to)) return false;
   if (installer && installer !== "all" && job.installer !== installer) return false;
   if (type === "service" && !job.service) return false;
   if (type === "install" && job.service) return false;
+  const isFullHouse = (job.installScope ?? "").toUpperCase().includes("FULL HOUSE");
+  if (scope === "full-house" && !isFullHouse) return false;
+  if (scope === "partial" && isFullHouse) return false;
   if (query) {
     const haystack = [job.address, job.workOrder, job.installer, job.builder, job.subdivision, job.installScope]
       .filter(Boolean)
@@ -85,6 +89,19 @@ function matches(job: JobRecord, params: URLSearchParams) {
     if (!haystack.includes(query)) return false;
   }
   return true;
+}
+
+const distinct = (values: Array<string | null>) => [
+  ...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))),
+].sort((first, second) => first.localeCompare(second, "en-US", { sensitivity: "base" }));
+
+function createDirectories(jobs: JobRecord[]): JobDirectories {
+  return {
+    installers: distinct(jobs.map((job) => job.installer)),
+    projectManagers: distinct(jobs.map((job) => job.projectManager)),
+    builders: distinct(jobs.map((job) => job.builder)),
+    subdivisions: distinct(jobs.map((job) => job.subdivision)),
+  };
 }
 
 const xmlEscape = (value: unknown) => String(value ?? "")
@@ -160,7 +177,9 @@ export async function GET(request: Request) {
     for (const row of overrides) combined.set(Number(row.id), fromDb(row));
 
     const params = new URL(request.url).searchParams;
-    const filtered = [...combined.values()].filter((job) => matches(job, params));
+    const allJobs = [...combined.values()];
+    const directories = createDirectories(allJobs);
+    const filtered = allJobs.filter((job) => matches(job, params));
     filtered.sort((a, b) =>
       (a.dispatchDate ?? "").localeCompare(b.dispatchDate ?? "") ||
       (a.address ?? "").localeCompare(b.address ?? ""),
@@ -184,6 +203,7 @@ export async function GET(request: Request) {
       total: filtered.length,
       metrics,
       analytics,
+      directories,
       dateRange: { from, to },
     });
   } catch (error) {

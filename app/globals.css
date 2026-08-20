@@ -278,6 +278,12 @@ tbody tr:hover { background: #fcfdf9; }
 .form-grid input:focus, .form-grid select:focus {
   border-color: #a9c94a; box-shadow: 0 0 0 3px rgba(183, 223, 50, .16);
 }
+.directory-new-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+.directory-new-row button {
+  height: 42px; margin-top: 7px; padding: 0 11px; border: 1px solid #dfe1da; border-radius: 11px;
+  background: #f4f5f1; color: #696c64; font-size: 11px; font-weight: 650; cursor: pointer;
+}
+.directory-new-row button:hover { border-color: #cfd9ad; background: #fbfdf4; color: #53680f; }
 .span-two { grid-column: 1 / -1; }
 .job-modal footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
 .secondary-button {
@@ -388,7 +394,7 @@ tbody tr:hover { background: #fcfdf9; }
   .range-controls input { width: 100%; min-width: 0; padding: 0 6px; }
   .range-divider { display: none; }
   .this-week { grid-column: 2 / 4; }
-  .global-filters { display: grid; grid-template-columns: 1fr 1fr; }
+  .global-filters { display: grid; grid-template-columns: repeat(3, 1fr); }
   .global-filters > span { grid-column: 1 / -1; }
   .global-filters select { width: 100%; min-width: 0; }
   .summary-grid { grid-template-columns: 1fr; }

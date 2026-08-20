@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import DispatchApp from "./DispatchApp";
 import seedJobs from "./data/jobs.json";
 import { summarizeJobs } from "./lib/job-analytics";
-import type { JobRecord } from "./lib/job-types";
+import type { JobDirectories, JobRecord } from "./lib/job-types";
 
 export const metadata: Metadata = {
   title: "Dispatch | TTS",
@@ -10,6 +10,10 @@ export const metadata: Metadata = {
 };
 
 const jobs = seedJobs as JobRecord[];
+
+const distinct = (values: Array<string | null>) => [
+  ...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))),
+].sort((first, second) => first.localeCompare(second, "en-US", { sensitivity: "base" }));
 
 const toIso = (date: Date) => {
   const year = date.getFullYear();
@@ -32,9 +36,12 @@ export default function Home() {
       (a.dispatchDate ?? "").localeCompare(b.dispatchDate ?? "") ||
       (a.address ?? "").localeCompare(b.address ?? ""),
     );
-  const installers = [
-    ...new Set(jobs.map((job) => job.installer).filter((name): name is string => Boolean(name))),
-  ].sort();
+  const directories: JobDirectories = {
+    installers: distinct(jobs.map((job) => job.installer)),
+    projectManagers: distinct(jobs.map((job) => job.projectManager)),
+    builders: distinct(jobs.map((job) => job.builder)),
+    subdivisions: distinct(jobs.map((job) => job.subdivision)),
+  };
   const initialSummary = summarizeJobs(initialJobs, initialFrom, initialTo);
 
   return (
@@ -42,7 +49,7 @@ export default function Home() {
       initialFrom={initialFrom}
       initialTo={initialTo}
       initialJobs={initialJobs}
-      installers={installers}
+      initialDirectories={directories}
       initialSummary={initialSummary}
     />
   );

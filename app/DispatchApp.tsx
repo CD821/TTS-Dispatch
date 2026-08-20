@@ -6,6 +6,7 @@ import { Show, SignInButton, UserButton } from "@clerk/nextjs";
 import InsightsView from "./InsightsView";
 import type {
   JobAnalytics,
+  JobDirectories,
   JobRecord,
   JobsResponse,
   RangeMetrics,
@@ -15,7 +16,7 @@ type Props = {
   initialFrom: string;
   initialTo: string;
   initialJobs: JobRecord[];
-  installers: string[];
+  initialDirectories: JobDirectories;
   initialSummary: { metrics: RangeMetrics; analytics: JobAnalytics };
 };
 
@@ -23,6 +24,59 @@ type DraftJob = Omit<JobRecord, "id">;
 type View = "dispatch" | "insights";
 type SortKey = "dispatchDate" | "address" | "service" | "installer" | "templateDate" | "dueDate" | "onTime";
 type SortDirection = "ascending" | "descending";
+
+const ADD_NEW_OPTION = "__add_new__";
+
+type DirectorySelectProps = {
+  label: string;
+  value: string | null;
+  options: string[];
+  placeholder: string;
+  onChange: (value: string) => void;
+};
+
+function DirectorySelect({ label, value, options, placeholder, onChange }: DirectorySelectProps) {
+  const [addingNew, setAddingNew] = useState(false);
+  const selectOptions = useMemo(() => {
+    const current = value?.trim();
+    if (!current || options.some((option) => option.toLowerCase() === current.toLowerCase())) return options;
+    return [...options, current].sort((first, second) =>
+      first.localeCompare(second, "en-US", { sensitivity: "base" }),
+    );
+  }, [options, value]);
+
+  return (
+    <label className="directory-field">
+      {label}
+      {addingNew ? (
+        <div className="directory-new-row">
+          <input
+            value={value ?? ""}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={`New ${label.toLowerCase()}`}
+          />
+          <button type="button" onClick={() => { onChange(""); setAddingNew(false); }}>Back</button>
+        </div>
+      ) : (
+        <select
+          value={value ?? ""}
+          onChange={(event) => {
+            if (event.target.value === ADD_NEW_OPTION) {
+              onChange("");
+              setAddingNew(true);
+              return;
+            }
+            onChange(event.target.value);
+          }}
+        >
+          <option value="">{placeholder}</option>
+          {selectOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+          <option value={ADD_NEW_OPTION}>＋ Add new…</option>
+        </select>
+      )}
+    </label>
+  );
+}
 
 const emptyDraft = (dispatchDate: string): DraftJob => ({
   division: "TTS",
@@ -82,7 +136,7 @@ export default function DispatchApp({
   initialFrom,
   initialTo,
   initialJobs,
-  installers,
+  initialDirectories,
   initialSummary,
 }: Props) {
   const [activeView, setActiveView] = useState<View>("dispatch");
@@ -94,7 +148,9 @@ export default function DispatchApp({
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [installerFilter, setInstallerFilter] = useState("all");
+  const [directories, setDirectories] = useState(initialDirectories);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<JobRecord | null>(null);
   const [draft, setDraft] = useState<DraftJob>(() => emptyDraft(initialFrom));
@@ -156,6 +212,7 @@ export default function DispatchApp({
         const params = new URLSearchParams({ from, to });
         if (query.trim()) params.set("q", query.trim());
         if (typeFilter !== "all") params.set("type", typeFilter);
+        if (scopeFilter !== "all") params.set("scope", scopeFilter);
         if (installerFilter !== "all") params.set("installer", installerFilter);
         const response = await fetch(`/api/jobs?${params}`, { signal: controller.signal });
         const data = (await response.json()) as Partial<JobsResponse>;
@@ -165,6 +222,7 @@ export default function DispatchApp({
         setJobs(data.jobs);
         setMetrics(data.metrics);
         setAnalytics(data.analytics);
+        if (data.directories) setDirectories(data.directories);
       } catch (error) {
         if ((error as Error).name !== "AbortError") {
           setMessage("The shared data is reconnecting. Your current view is still available.");
@@ -178,7 +236,7 @@ export default function DispatchApp({
       controller.abort();
       window.clearTimeout(timer);
     };
-  }, [from, to, query, typeFilter, installerFilter, refreshKey]);
+  }, [from, to, query, typeFilter, scopeFilter, installerFilter, refreshKey]);
 
   useEffect(() => {
     if (!message) return;
@@ -229,6 +287,7 @@ export default function DispatchApp({
     const params = new URLSearchParams({ from, to, format: "xls" });
     if (query.trim()) params.set("q", query.trim());
     if (typeFilter !== "all") params.set("type", typeFilter);
+    if (scopeFilter !== "all") params.set("scope", scopeFilter);
     if (installerFilter !== "all") params.set("installer", installerFilter);
     return `/api/jobs?${params}`;
   };
@@ -283,11 +342,6 @@ export default function DispatchApp({
       const data = (await response.json()) as { job?: JobRecord; error?: string };
       if (!response.ok || !data.job) throw new Error(data.error ?? "Unable to save this job.");
       setModalOpen(false);
-      if (data.job.dispatchDate) {
-        const week = getWeekRange(data.job.dispatchDate);
-        setFrom(week.from);
-        setTo(week.to);
-      }
       setQuery("");
       setRefreshKey((value) => value + 1);
       setMessage(editing ? "Job updated for the whole team." : "Job added to dispatch.");
@@ -347,7 +401,8 @@ export default function DispatchApp({
           <div className="global-filters">
             <span>{rangeLabel}</span>
             <label><span className="sr-only">Work type</span><select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option value="all">All work</option><option value="install">Installs</option><option value="service">Services</option></select></label>
-            <label><span className="sr-only">Installer</span><select value={installerFilter} onChange={(event) => setInstallerFilter(event.target.value)}><option value="all">All installers</option>{installers.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
+            <label><span className="sr-only">House scope</span><select value={scopeFilter} onChange={(event) => setScopeFilter(event.target.value)}><option value="all">All scopes</option><option value="full-house">Full house</option><option value="partial">Partial</option></select></label>
+            <label><span className="sr-only">Installer</span><select value={installerFilter} onChange={(event) => setInstallerFilter(event.target.value)}><option value="all">All installers</option>{directories.installers.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
           </div>
         </section>
 
@@ -417,10 +472,10 @@ export default function DispatchApp({
                 <label>Work type<span>Install or service</span><select value={draft.service ? "service" : "install"} onChange={(event) => updateDraft("service", event.target.value === "service")}><option value="install">Install</option><option value="service">Service</option></select></label>
                 <label>Work order<input value={draft.workOrder ?? ""} onChange={(event) => updateDraft("workOrder", event.target.value)} placeholder="HC014115" /></label>
                 <label>Division<select value={draft.division ?? "TTS"} onChange={(event) => updateDraft("division", event.target.value)}><option>TTS</option><option>BESPOKE</option></select></label>
-                <label>Installer<input list="installer-list" value={draft.installer ?? ""} onChange={(event) => updateDraft("installer", event.target.value)} placeholder="Assign installer" /></label>
-                <label>Project manager<input value={draft.projectManager ?? ""} onChange={(event) => updateDraft("projectManager", event.target.value)} placeholder="Project manager" /></label>
-                <label>Builder<input value={draft.builder ?? ""} onChange={(event) => updateDraft("builder", event.target.value)} placeholder="Builder" /></label>
-                <label>Subdivision<input value={draft.subdivision ?? ""} onChange={(event) => updateDraft("subdivision", event.target.value)} placeholder="Subdivision" /></label>
+                <DirectorySelect label="Installer" value={draft.installer} options={directories.installers} placeholder="Assign installer" onChange={(value) => updateDraft("installer", value)} />
+                <DirectorySelect label="Project manager" value={draft.projectManager} options={directories.projectManagers} placeholder="Choose project manager" onChange={(value) => updateDraft("projectManager", value)} />
+                <DirectorySelect label="Builder" value={draft.builder} options={directories.builders} placeholder="Choose builder" onChange={(value) => updateDraft("builder", value)} />
+                <DirectorySelect label="Subdivision" value={draft.subdivision} options={directories.subdivisions} placeholder="Choose subdivision" onChange={(value) => updateDraft("subdivision", value)} />
                 <label className="span-two">Scope<input value={draft.installScope ?? ""} onChange={(event) => updateDraft("installScope", event.target.value)} placeholder="Full house, kitchen, master bath…" /></label>
                 <label>Template date<span>Date template was completed</span><input type="date" value={draft.templateDate ?? ""} onChange={(event) => updateDraft("templateDate", event.target.value)} /></label>
                 <label>Due date<span>Original install date</span><input type="date" value={draft.dueDate ?? ""} onChange={(event) => updateDraft("dueDate", event.target.value)} /></label>
@@ -428,7 +483,6 @@ export default function DispatchApp({
               </div>
               <footer><button type="button" className="secondary-button" onClick={() => setModalOpen(false)}>Cancel</button><button type="submit" className="primary-button" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Add to dispatch"}</button></footer>
             </form>
-            <datalist id="installer-list">{installers.map((name) => <option key={name} value={name} />)}</datalist>
           </section>
         </div>
       ) : null}

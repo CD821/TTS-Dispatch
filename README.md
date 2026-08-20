@@ -60,5 +60,7 @@ npm run db:setup  # create the Neon table and indexes
 - Clerk protects the dashboard and every `/api` route.
 - The API verifies the current Clerk user again before reading or changing data.
 - Neon stores the Clerk user ID that created or last updated each shared record.
-- Excel exports use the current date range, search, work type, and installer filters.
+- Excel exports use the current date range, search, work type, full-house/partial, and installer filters.
+- Custom date ranges stay selected while working and reset only on reload or when **This week** is clicked.
+- Installer, project manager, builder, and subdivision fields share reusable dropdown choices, including an **Add new** option.
 - No Clerk or Neon secrets are included in this repository.
