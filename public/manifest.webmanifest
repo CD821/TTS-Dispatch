@@ -1,0 +1,17 @@
+{
+  "name": "TTS Dispatch",
+  "short_name": "Dispatch",
+  "description": "Installs, services, and on-time status in one calm workspace.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f5f1",
+  "theme_color": "#b7df32",
+  "icons": [
+    {
+      "src": "/app-icon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
