@@ -1,13 +1,11 @@
-import seedJobs from "../../data/jobs.json";
 import { auth } from "@clerk/nextjs/server";
 import { listStoredJobs, saveStoredJob, type StoredJobRow } from "../../../db/jobs-store";
+import { sourceJobs } from "../../data/job-seeds";
 import { summarizeJobs } from "../../lib/job-analytics";
 import { createInsightsPdf } from "../../lib/insights-pdf";
 import type { JobDirectories, JobRecord } from "../../lib/job-types";
 
 export type { JobRecord } from "../../lib/job-types";
-
-const sourceJobs = seedJobs as JobRecord[];
 
 const cleanText = (value: unknown) => {
   if (typeof value !== "string") return null;

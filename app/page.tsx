@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import DispatchApp from "./DispatchApp";
-import seedJobs from "./data/jobs.json";
+import { sourceJobs as jobs } from "./data/job-seeds";
 import { summarizeJobs } from "./lib/job-analytics";
-import type { JobDirectories, JobRecord } from "./lib/job-types";
+import type { JobDirectories } from "./lib/job-types";
 
 export const metadata: Metadata = {
   title: "Dispatch | TTS",
   description: "A calm, clear dispatch workspace for installs and services.",
 };
-
-const jobs = seedJobs as JobRecord[];
 
 const distinct = (values: Array<string | null>) => [
   ...new Set(values.map((value) => value?.trim()).filter((value): value is string => Boolean(value))),
