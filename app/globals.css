@@ -384,6 +384,7 @@ tbody tr:hover { background: #fcfdf9; }
   .search-button { display: none; }
   .export-button { padding: 10px; font-size: 0; }
   .export-button::after { content: "Excel"; font-size: 11px; }
+  .pdf-button::after { content: "PDF"; }
   .primary-button { padding: 11px 12px; font-size: 12px; }
   .profile { width: 36px; height: 36px; }
   .view-tabs { margin-top: 20px; }

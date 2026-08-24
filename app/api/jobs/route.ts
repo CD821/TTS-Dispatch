@@ -2,6 +2,7 @@ import seedJobs from "../../data/jobs.json";
 import { auth } from "@clerk/nextjs/server";
 import { listStoredJobs, saveStoredJob, type StoredJobRow } from "../../../db/jobs-store";
 import { summarizeJobs } from "../../lib/job-analytics";
+import { createInsightsPdf } from "../../lib/insights-pdf";
 import type { JobDirectories, JobRecord } from "../../lib/job-types";
 
 export type { JobRecord } from "../../lib/job-types";
@@ -186,6 +187,7 @@ export async function GET(request: Request) {
     );
     const from = params.get("from");
     const to = params.get("to");
+    const { metrics, analytics } = summarizeJobs(filtered, from, to);
     if (params.get("format") === "xls") {
       const filename = `tts-dispatch-${from ?? "all"}-to-${to ?? "all"}.xls`;
       return new Response(`\uFEFF${createExcelExport(filtered)}`, {
@@ -196,7 +198,27 @@ export async function GET(request: Request) {
         },
       });
     }
-    const { metrics, analytics } = summarizeJobs(filtered, from, to);
+    if (params.get("format") === "pdf") {
+      const pdf = await createInsightsPdf({
+        metrics,
+        analytics,
+        from,
+        to,
+        filters: {
+          work: params.get("type"),
+          scope: params.get("scope"),
+          installer: params.get("installer"),
+        },
+      });
+      const filename = `tts-insights-${from ?? "all"}-to-${to ?? "all"}.pdf`;
+      return new Response(Buffer.from(pdf), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store",
+        },
+      });
+    }
 
     return Response.json({
       jobs: filtered.slice(0, 250),

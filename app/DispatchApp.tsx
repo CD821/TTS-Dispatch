@@ -283,8 +283,8 @@ export default function DispatchApp({
     }));
   };
 
-  const getExportUrl = () => {
-    const params = new URLSearchParams({ from, to, format: "xls" });
+  const getExportUrl = (format: "xls" | "pdf") => {
+    const params = new URLSearchParams({ from, to, format });
     if (query.trim()) params.set("q", query.trim());
     if (typeFilter !== "all") params.set("type", typeFilter);
     if (scopeFilter !== "all") params.set("scope", scopeFilter);
@@ -375,7 +375,8 @@ export default function DispatchApp({
                 <span>⌕</span> Search <kbd>⌘ K</kbd>
               </button>
             ) : null}
-            <a className="export-button" href={getExportUrl()}>⇩ Export Excel</a>
+            <a className="export-button" href={getExportUrl("xls")} download>⇩ Export Excel</a>
+            {activeView === "insights" ? <a className="export-button pdf-button" href={getExportUrl("pdf")} download>⇩ Export PDF</a> : null}
             <button className="primary-button" onClick={openAdd}>＋ Add job</button>
             <div className="account-control">
               <Show when="signed-in"><UserButton /></Show>
