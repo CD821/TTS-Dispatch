@@ -7,7 +7,7 @@ A multi-user dispatch dashboard for installs and services. This repository is pr
 - **Clerk** — sign-in, user accounts, and team access
 - **Neon** — shared Postgres storage for added and edited jobs
 
-The original 6,042 workbook records are included in `app/data/jobs.json`. New jobs and edits are stored in Neon and automatically override the matching imported record for every signed-in member.
+The 6,042 original workbook records plus 20 verified August 21 additions are included in `app/data/jobs.json`. New jobs and edits are stored in Neon and automatically override the matching imported record for every signed-in member.
 
 ## Deploy from GitHub
 
