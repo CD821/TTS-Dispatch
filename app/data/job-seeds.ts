@@ -13,6 +13,7 @@ import september4Jobs from "./jobs-2026-09-04.json";
 import september8Jobs from "./jobs-2026-09-08.json";
 import september9Jobs from "./jobs-2026-09-09.json";
 import september10Jobs from "./jobs-2026-09-10.json";
+import september11Jobs from "./jobs-2026-09-11.json";
 
 export const sourceJobs = [
   ...(baseJobs as JobRecord[]),
@@ -29,4 +30,5 @@ export const sourceJobs = [
   ...(september8Jobs as JobRecord[]),
   ...(september9Jobs as JobRecord[]),
   ...(september10Jobs as JobRecord[]),
+  ...(september11Jobs as JobRecord[]),
 ];
